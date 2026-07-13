@@ -1,0 +1,244 @@
+:root {
+  /* Значения по умолчанию — переопределяются темой Telegram в app.js */
+  --bg: #17212b;
+  --secondary-bg: #232e3c;
+  --text: #ffffff;
+  --hint: #7d8b99;
+  --link: #64b5ef;
+  --button: #3390ec;
+  --button-text: #ffffff;
+  --accent: #3390ec;
+  --danger: #e53935;
+  --radius: 14px;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  overscroll-behavior-y: none;
+}
+
+#app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 14px calc(28px + env(safe-area-inset-bottom));
+}
+
+/* ===== Табы ===== */
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 6px;
+  padding: 10px 0;
+  background: var(--bg);
+}
+.tab {
+  flex: 1;
+  padding: 10px 4px;
+  border: none;
+  border-radius: 10px;
+  background: var(--secondary-bg);
+  color: var(--hint);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .15s, background .15s;
+}
+.tab.active {
+  background: var(--accent);
+  color: var(--button-text);
+}
+
+/* ===== Экраны ===== */
+.view { display: none; animation: fade .2s ease; }
+.view.active { display: block; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ===== Карточки ===== */
+.card {
+  background: var(--secondary-bg);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.field { display: block; margin-bottom: 14px; }
+.field-label {
+  display: block;
+  font-size: 13px;
+  color: var(--hint);
+  margin-bottom: 6px;
+}
+
+input[type="date"],
+input[type="number"] {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+}
+input:focus { border-color: var(--accent); }
+
+/* ===== Сетка вводов метрик ===== */
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.metric-input-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--hint);
+}
+.metric-input-label .row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.metric-input-label .unit {
+  font-size: 12px;
+  color: var(--hint);
+  min-width: 22px;
+}
+.metric-emoji { font-size: 14px; }
+
+.hint {
+  font-size: 12px;
+  color: var(--hint);
+  margin: 12px 0 0;
+}
+
+/* ===== Чипы выбора метрики ===== */
+.metric-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 12px;
+  scrollbar-width: none;
+}
+.metric-chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--secondary-bg);
+  color: var(--hint);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chip.active { background: var(--accent); color: var(--button-text); border-color: var(--accent); }
+
+/* ===== График ===== */
+.chart-card { padding-top: 14px; }
+.chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.chart-head h2 { font-size: 18px; margin: 0; }
+.trend-badge {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: var(--bg);
+}
+.trend-up { color: #ff5c5c; }
+.trend-down { color: #4caf82; }
+.trend-flat { color: var(--hint); }
+
+.chart-wrap { position: relative; height: 300px; }
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+.stat {
+  text-align: center;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 10px 4px;
+}
+.stat .val { font-size: 17px; font-weight: 700; }
+.stat .lbl { font-size: 11px; color: var(--hint); margin-top: 2px; }
+
+/* ===== История ===== */
+.hist-entry {
+  background: var(--secondary-bg);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.hist-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.hist-date { font-weight: 700; font-size: 15px; }
+.hist-del {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.hist-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.hist-val { font-size: 13px; color: var(--hint); }
+.hist-val b { color: var(--text); font-weight: 600; }
+
+.empty {
+  text-align: center;
+  color: var(--hint);
+  padding: 48px 20px;
+  font-size: 15px;
+}
+
+/* ===== Тост ===== */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(80px);
+  background: #000;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 24px;
+  font-size: 14px;
+  opacity: 0;
+  transition: transform .25s, opacity .25s;
+  pointer-events: none;
+  z-index: 100;
+  max-width: 90%;
+  text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); opacity: .95; }
