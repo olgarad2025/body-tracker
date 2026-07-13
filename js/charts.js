@@ -252,11 +252,13 @@ function renderChart(canvas, entries, metricKey, goal, range) {
           label: (item) => `${Math.round(item.parsed.y * 10) / 10} ${metric.unit}`,
         },
       },
-      // Панорамирование (перетаскивание) и зум (щипок/колесо) по оси X.
+      // Только панорамирование (перетаскивание) по оси X.
+      // Pinch/wheel-зум отключён намеренно: он приводил к некорректному
+      // масштабу и падению графика. Масштаб меняется кнопками Дни/Недели/…
       zoom: {
         limits: (panMin != null && panMax != null) ? { x: { min: panMin, max: panMax } } : undefined,
         pan: { enabled: true, mode: 'x', threshold: 8 },
-        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+        zoom: { wheel: { enabled: false }, pinch: { enabled: false } },
       },
     },
     scales: {
@@ -274,8 +276,13 @@ function renderChart(canvas, entries, metricKey, goal, range) {
     },
   };
 
-  if (chartInstance) chartInstance.destroy();
-  chartInstance = new Chart(canvas, { type: 'line', data: { datasets }, options });
+  if (chartInstance) { try { chartInstance.destroy(); } catch (_) {} }
+  try {
+    chartInstance = new Chart(canvas, { type: 'line', data: { datasets }, options });
+  } catch (e) {
+    console.error('Ошибка построения графика', e);
+    chartInstance = null;
+  }
 
   return { reg, stats, metric };
 }
