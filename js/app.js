@@ -1,5 +1,9 @@
 // ===== Инициализация Telegram Web App =====
 const tg = window.Telegram?.WebApp;
+// Запущены ли мы внутри Telegram. Вне Telegram (обычный браузер или PWA
+// с экрана «Домой») platform == 'unknown' — тогда нативной кнопки нет,
+// показываем свою кнопку «Сохранить» и храним данные в localStorage.
+const inTelegram = !!(tg && tg.platform && tg.platform !== 'unknown');
 
 function applyTheme() {
   if (!tg) return;
@@ -54,6 +58,7 @@ function renderDashboardView() {
 function openGoalPanel() {
   document.getElementById('g-height').value = goal?.height ?? '';
   document.getElementById('g-start').value = goal?.startWeight ?? '';
+  document.getElementById('g-startdate').value = goal?.startDate ?? '';
   document.getElementById('g-target').value = goal?.targetWeight ?? '';
   document.getElementById('g-stages').value = goal?.stages ?? '';
   document.getElementById('g-date').value = goal?.targetDate ?? '';
@@ -64,6 +69,10 @@ function openGoalPanel() {
   const wp = weightPoints(entries);
   document.getElementById('g-start').placeholder =
     wp.length ? `${fmt1(wp[0].y)} — первый замер` : 'например, 100';
+  // По умолчанию — дата первого замера веса.
+  if (!goal?.startDate && wp.length) {
+    document.getElementById('g-startdate').value = new Date(wp[0].x).toISOString().slice(0, 10);
+  }
 
   document.getElementById('dashboard').hidden = true;
   document.getElementById('goal-panel').hidden = false;
@@ -89,6 +98,7 @@ async function saveGoalFromForm() {
   const g = {
     height: num('g-height'),
     startWeight: start,
+    startDate: document.getElementById('g-startdate').value || null,
     targetWeight: target,
     stages,
     targetDate: document.getElementById('g-date').value || null,
@@ -249,35 +259,70 @@ function renderChartView() {
     <div class="stat"><div class="val">${fmt(stats.min)}–${fmt(stats.max)}</div><div class="lbl">Мин–макс</div></div>`;
 }
 
-// ===== Экран «История» =====
+// ===== Экран «История» (журнал веса) =====
 function renderHistory() {
   const list = document.getElementById('history-list');
   if (!entries.length) {
     list.innerHTML = `<div class="empty">Пока нет замеров.<br>Добавь первый на вкладке «➕ Замер».</div>`;
     return;
   }
-  list.innerHTML = '';
-  for (const e of [...entries].reverse()) {
-    const div = document.createElement('div');
-    div.className = 'hist-entry';
-    const dateFmt = new Date(e.date + 'T00:00:00').toLocaleDateString('ru-RU', {
-      day: '2-digit', month: 'long', year: 'numeric',
-    });
-    const vals = METRICS
-      .filter(m => e.values[m.key] != null)
-      .map(m => `<span class="hist-val">${m.emoji} <b>${e.values[m.key]}</b> ${m.unit}</span>`)
-      .join('');
-    div.innerHTML = `
-      <div class="hist-head">
-        <span class="hist-date">${dateFmt}</span>
-        <button class="hist-del" data-date="${e.date}">Удалить</button>
-      </div>
-      <div class="hist-values">${vals}</div>`;
-    list.appendChild(div);
-  }
 
+  const rows = buildJournal(entries, goal);
+  const hasBmi = !!(goal && goal.height);
+
+  let html = `<p class="jhint">Нажми на строку, чтобы увидеть сантиметры и удалить запись.</p>
+    <div class="journal ${hasBmi ? 'with-bmi' : ''}">
+      <div class="jrow jhead">
+        <span class="jc-date">Дата</span>
+        <span>Записано</span>
+        <span>Ср.</span>
+        <span>Темп/нед</span>
+        ${hasBmi ? '<span>ИМТ</span>' : ''}
+      </div>`;
+
+  for (const r of rows) {
+    const dd = new Date(r.date + 'T00:00:00');
+    const day = dd.toLocaleDateString('ru-RU', { day: '2-digit' });
+    const wd = dd.toLocaleDateString('ru-RU', { weekday: 'short' });
+    const mon = dd.toLocaleDateString('ru-RU', { month: 'short' });
+
+    let rateHtml = '<span class="jmuted">—</span>';
+    if (r.rate != null) {
+      if (Math.abs(r.rate) < 0.05) rateHtml = '<span class="jmuted">0</span>';
+      else {
+        const arrow = r.rate < 0 ? '↓' : '↑';
+        rateHtml = `<span class="jrate ${r.rate < 0 ? 'down' : 'up'}">${arrow}${fmt1(Math.abs(r.rate))}</span>`;
+      }
+    }
+
+    const cmHtml = r.cm.length
+      ? r.cm.map(c => `<span class="hist-val">${c.emoji} <b>${c.val}</b> ${c.unit}</span>`).join('')
+      : '<span class="jmuted">только вес</span>';
+
+    html += `
+      <div class="jrow jbody" data-date="${r.date}">
+        <span class="jc-date"><b>${day}</b> <span class="jwd">${wd}, ${mon}</span></span>
+        <span>${r.weight != null ? fmt1(r.weight) : '<span class="jmuted">—</span>'}</span>
+        <span class="jmuted">${r.avg != null ? fmt1(r.avg) : '—'}</span>
+        <span>${rateHtml}</span>
+        ${hasBmi ? `<span class="jmuted">${r.bmi != null ? r.bmi.toFixed(1) : '—'}</span>` : ''}
+      </div>
+      <div class="jdetail" data-detail="${r.date}" hidden>
+        <div class="hist-values">${cmHtml}</div>
+        <button class="hist-del" data-date="${r.date}">Удалить запись</button>
+      </div>`;
+  }
+  html += '</div>';
+  list.innerHTML = html;
+
+  list.querySelectorAll('.jrow.jbody').forEach(row => {
+    row.onclick = () => {
+      const det = list.querySelector(`[data-detail="${row.dataset.date}"]`);
+      if (det) { det.hidden = !det.hidden; haptic('light'); }
+    };
+  });
   list.querySelectorAll('.hist-del').forEach(btn => {
-    btn.onclick = () => confirmDelete(btn.dataset.date);
+    btn.onclick = (e) => { e.stopPropagation(); confirmDelete(btn.dataset.date); };
   });
 }
 
@@ -301,8 +346,9 @@ function switchView(view) {
   document.querySelectorAll('.view').forEach(v =>
     v.classList.toggle('active', v.id === 'view-' + view));
 
-  // MainButton (кнопка «Сохранить замер») нужна только на экране добавления.
-  if (tg?.MainButton) {
+  // Нативная кнопка Telegram (MainButton) нужна только на экране добавления
+  // и только внутри Telegram. В PWA/браузере используется кнопка на странице.
+  if (inTelegram && tg?.MainButton) {
     if (view === 'add') { tg.MainButton.setText('Сохранить замер'); tg.MainButton.show(); }
     else tg.MainButton.hide();
   }
@@ -333,8 +379,15 @@ async function init() {
       applyTheme();
       if (document.getElementById('view-charts').classList.contains('active')) renderChartView();
     });
+  }
+  if (inTelegram) {
     tg.MainButton.setText('Сохранить замер');
     tg.MainButton.onClick(saveCurrentEntry);
+  } else {
+    // Вне Telegram — показываем кнопку сохранения на странице.
+    const btn = document.getElementById('save-entry-btn');
+    btn.hidden = false;
+    btn.addEventListener('click', saveCurrentEntry);
   }
 
   buildAddForm();

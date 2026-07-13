@@ -4,6 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Замеры тела</title>
+
+  <!-- PWA / добавление на экран «Домой» в iPhone -->
+  <meta name="theme-color" content="#17212b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Замеры" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
+
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="css/style.css" />
@@ -38,6 +49,10 @@
             <input type="number" inputmode="decimal" step="0.1" min="0" id="g-start" placeholder="авто по первому замеру" />
           </label>
           <label class="field">
+            <span class="field-label">Стартовая дата (начало пути)</span>
+            <input type="date" id="g-startdate" />
+          </label>
+          <label class="field">
             <span class="field-label">Целевой вес, кг</span>
             <input type="number" inputmode="decimal" step="0.1" min="0" id="g-target" placeholder="например, 80" />
           </label>
@@ -68,6 +83,7 @@
         </label>
         <div id="metric-inputs" class="metric-grid"></div>
         <p class="hint">Заполни любые поля — пустые просто не сохранятся.</p>
+        <button class="btn-primary" id="save-entry-btn" hidden>Сохранить замер</button>
       </div>
     </section>
 

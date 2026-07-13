@@ -81,3 +81,60 @@ function computeGoalProgress(entries, goal) {
 
   return out;
 }
+
+// ===== Журнал веса =====
+// Для каждой даты с весом считает скользящее среднее (трейлинг 7 дней)
+// и недельный темп (по линрегрессии за трейлинг 14 дней).
+function weightSeriesStats(entries) {
+  const pts = entries
+    .filter(e => e.values.weight != null && !Number.isNaN(e.values.weight))
+    .map(e => ({ x: new Date(e.date + 'T00:00:00').getTime(), y: Number(e.values.weight), date: e.date }))
+    .sort((a, b) => a.x - b.x);
+
+  const byDate = {};
+  for (let i = 0; i < pts.length; i++) {
+    const x = pts[i].x;
+
+    // Скользящее среднее: все замеры за последние 7 дней включительно.
+    let sum = 0, c = 0;
+    for (let j = i; j >= 0 && (x - pts[j].x) <= 7 * MS_PER_DAY; j--) { sum += pts[j].y; c++; }
+    const avg = sum / c;
+
+    // Недельный темп: регрессия по окну последних 14 дней.
+    const win = [];
+    for (let j = i; j >= 0 && (x - pts[j].x) <= 14 * MS_PER_DAY; j--) win.push(pts[j]);
+    let rate = null;
+    if (win.length >= 2) {
+      const reg = linearRegression(win);
+      if (reg.valid) rate = reg.slope * MS_PER_WEEK;
+    }
+
+    byDate[pts[i].date] = { avg, rate };
+  }
+  return byDate;
+}
+
+// Собирает строки журнала (все даты, новые сверху) с весом, средним,
+// темпом, ИМТ и списком сантиметровых замеров.
+function buildJournal(entries, goal) {
+  const height = goal && goal.height;
+  const stats = weightSeriesStats(entries);
+
+  return [...entries]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .map(e => {
+      const w = e.values.weight != null ? Number(e.values.weight) : null;
+      const s = stats[e.date];
+      const cm = METRICS
+        .filter(m => m.key !== 'weight' && e.values[m.key] != null)
+        .map(m => ({ emoji: m.emoji, unit: m.unit, val: e.values[m.key] }));
+      return {
+        date: e.date,
+        weight: w,
+        avg: s ? s.avg : null,
+        rate: s ? s.rate : null,
+        bmi: (w != null && height) ? bmi(w, height) : null,
+        cm,
+      };
+    });
+}

@@ -44,7 +44,9 @@ function renderChart(canvas, entries, metricKey, goal) {
         { x: projX, y: reg.slope * projX + reg.intercept },
       ];
     }
-    const x0 = points[0].x;
+    const x0 = goal.startDate
+      ? new Date(goal.startDate + 'T00:00:00').getTime()
+      : points[0].x;
     goalLine = [{ x: x0, y: target }, { x: projX, y: target }];
   }
 

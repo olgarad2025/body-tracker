@@ -380,3 +380,47 @@ input:focus { border-color: var(--accent); }
 .trend-tile.flat .tv { color: var(--hint); }
 
 .empty-card { padding: 0; }
+
+/* ===== Журнал веса (История) ===== */
+.jhint { font-size: 12px; color: var(--hint); margin: 2px 4px 10px; }
+.journal {
+  background: var(--secondary-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.jrow {
+  display: grid;
+  grid-template-columns: 1.6fr .8fr .8fr .9fr;
+  align-items: center;
+  gap: 4px;
+  padding: 11px 12px;
+  font-size: 14px;
+}
+.journal.with-bmi .jrow {
+  grid-template-columns: 1.5fr .7fr .7fr .85fr .7fr;
+}
+.jrow > span { text-align: center; }
+.jc-date { text-align: left !important; }
+.jhead {
+  font-size: 11px;
+  color: var(--hint);
+  border-bottom: 1px solid var(--border);
+}
+.jbody { border-bottom: 1px solid var(--border); cursor: pointer; }
+.jbody:last-of-type { border-bottom: none; }
+.jbody:active { background: var(--bg); }
+.jwd { color: var(--hint); font-size: 11px; }
+.jmuted { color: var(--hint); }
+.jrate.down { color: var(--good); font-weight: 600; }
+.jrate.up { color: #ff5c5c; font-weight: 600; }
+.jdetail {
+  padding: 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.jdetail .hist-values { margin-bottom: 10px; }
+.jdetail .hist-del {
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  padding: 8px 14px;
+}
