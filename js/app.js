@@ -5,6 +5,25 @@ const tg = window.Telegram?.WebApp;
 // показываем свою кнопку «Сохранить» и храним данные в localStorage.
 const inTelegram = !!(tg && tg.platform && tg.platform !== 'unknown');
 
+// Прямая ссылка на Mini App внутри Telegram (создаётся в BotFather через /newapp).
+// Если задана, то при открытии вне Telegram (например, с иконки на экране «Домой»)
+// приложение перенаправляет в Telegram — так данные всегда в облаке (CloudStorage),
+// а не в localStorage телефона. Оставь пустым, чтобы работал обычный веб-режим.
+const TELEGRAM_APP_LINK = 'https://t.me/zamertela_bot/app';
+
+// Экран-«лаунчер»: показывается вне Telegram и уводит в Telegram-приложение.
+function showTelegramLauncher() {
+  document.getElementById('app').innerHTML = `
+    <div class="launch">
+      <img src="icons/icon-192.png" class="launch-icon" alt="" />
+      <h1>Замеры тела</h1>
+      <p>Открываю в Telegram — так замеры хранятся в облаке и синхронизируются
+         между устройствами.</p>
+      <a class="btn-primary launch-btn" href="${TELEGRAM_APP_LINK}">Открыть в Telegram</a>
+    </div>`;
+  setTimeout(() => { location.href = TELEGRAM_APP_LINK; }, 500);
+}
+
 function applyTheme() {
   if (!tg) return;
   const p = tg.themeParams || {};
@@ -371,6 +390,9 @@ async function reload() {
 
 // ===== Старт =====
 async function init() {
+  // Вне Telegram, но задана ссылка на Mini App → уводим в Telegram (данные в облаке).
+  if (!inTelegram && TELEGRAM_APP_LINK) { showTelegramLauncher(); return; }
+
   if (tg) {
     tg.ready();
     tg.expand();
