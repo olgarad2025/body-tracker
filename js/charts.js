@@ -83,32 +83,57 @@ function renderChart(canvas, entries, metricKey, goal, range) {
   const isWeightGoal = metricKey === 'weight' && goal && goal.targetWeight != null && points.length >= 1;
   let projX = points.length ? points[points.length - 1].x : 0;
   let goalLine = [], projLine = [], minCorridor = [], maxCorridor = [];
+  let xMin, xMax; // явное окно оси X для графика веса с целью
 
   if (isWeightGoal) {
+    const DAY = MS_PER_DAY, WEEK = MS_PER_WEEK;
     const target = goal.targetWeight;
-    const lastX = points[points.length - 1].x;
+    const rawFirstX = raw[0].x;
+    const rawLastX = raw[raw.length - 1].x;
     const lastY = points[points.length - 1].y;
-    const proj = projectToTarget(reg, lastX, lastY, target);
 
-    if (proj && proj.dateMs && proj.dateMs > lastX) {
-      projX = Math.min(proj.dateMs, lastX + 365 * MS_PER_DAY);
+    const startX = goal.startDate
+      ? new Date(goal.startDate + 'T00:00:00').getTime()
+      : rawFirstX;
+    const startWeight = goal.startWeight != null ? goal.startWeight : raw[0].y;
+    const minRate = goal.minRate != null ? goal.minRate : 0.5;
+    const maxRate = goal.maxRate != null ? goal.maxRate : 1.0;
+    const total = startWeight - target;
+
+    // До какого момента строим план: когда медленная (мин) линия дойдёт до цели.
+    const goalReachX = total > 0 && minRate > 0
+      ? Math.min(startX + (total / minRate) * WEEK, startX + 730 * DAY)
+      : rawLastX + 30 * DAY;
+
+    // Окно оси X по масштабу. Будущее показываем всегда, чтобы был виден коридор.
+    if (range === 'all') {
+      xMin = Math.min(startX, rawFirstX);
+      xMax = goalReachX;
+    } else if (range === 'months') {
+      xMin = Math.min(startX, rawFirstX);
+      xMax = Math.min(goalReachX, rawLastX + 182 * DAY);
+    } else if (range === 'weeks') {
+      xMin = Math.max(startX, rawLastX - 84 * DAY);
+      xMax = Math.min(goalReachX, rawLastX + 84 * DAY);
+    } else { // days
+      xMin = Math.max(startX, rawLastX - 30 * DAY);
+      xMax = Math.min(goalReachX, rawLastX + 30 * DAY);
+    }
+
+    // Прогноз по фактическому тренду (если он вообще ведёт к цели).
+    const proj = projectToTarget(reg, rawLastX, lastY, target);
+    if (proj && proj.dateMs && proj.dateMs > rawLastX) {
+      projX = Math.min(proj.dateMs, xMax);
       projLine = [
-        { x: lastX, y: reg.slope * lastX + reg.intercept },
+        { x: rawLastX, y: reg.slope * rawLastX + reg.intercept },
         { x: projX, y: reg.slope * projX + reg.intercept },
       ];
     }
-    const startX = goal.startDate
-      ? new Date(goal.startDate + 'T00:00:00').getTime()
-      : points[0].x;
-    goalLine = [{ x: startX, y: target }, { x: projX, y: target }];
 
-    // Коридор здорового снижения (мин/макс кг в неделю) из стартовой точки.
-    const startWeight = goal.startWeight != null ? goal.startWeight : points[0].y;
-    const minRate = goal.minRate != null ? goal.minRate : 0.5;
-    const maxRate = goal.maxRate != null ? goal.maxRate : 1.0;
-    const vMin = points[0].x;
-    minCorridor = corridorLine(startX, startWeight, target, minRate, vMin, projX);
-    maxCorridor = corridorLine(startX, startWeight, target, maxRate, vMin, projX);
+    // Линия цели и коридор строятся из стартовой точки до конца окна.
+    goalLine = [{ x: startX, y: target }, { x: xMax, y: target }];
+    minCorridor = corridorLine(startX, startWeight, target, minRate, startX, xMax);
+    maxCorridor = corridorLine(startX, startWeight, target, maxRate, startX, xMax);
   }
 
   // Линия тренда — две точки на краях диапазона данных.
@@ -217,6 +242,8 @@ function renderChart(canvas, entries, metricKey, goal, range) {
     scales: {
       x: {
         type: 'linear',
+        min: xMin,
+        max: xMax,
         grid: { color: grid },
         ticks: { color: hint, maxRotation: 0, autoSkipPadding: 20, callback: fmtTick },
       },
