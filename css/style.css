@@ -11,6 +11,8 @@
   --danger: #e53935;
   --radius: 14px;
   --border: rgba(255, 255, 255, 0.08);
+  --gauge-bg: rgba(125, 139, 153, 0.20);
+  --good: #4caf82;
 }
 
 * {
@@ -242,3 +244,139 @@ input:focus { border-color: var(--accent); }
   text-align: center;
 }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: .95; }
+
+/* ===== Дашборд (Отчёт) ===== */
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.card-head h2 { font-size: 17px; margin: 0; color: var(--accent); }
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--hint);
+  font-size: 17px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.btn-primary {
+  width: 100%;
+  margin-top: 6px;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--button-text);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-danger-ghost {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--danger);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--danger);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Приглашение поставить цель */
+.goal-cta { text-align: center; }
+.cta-weight { font-size: 40px; font-weight: 800; line-height: 1.1; }
+.cta-weight span { font-size: 20px; color: var(--hint); font-weight: 600; }
+.cta-sub { color: var(--hint); font-size: 14px; margin-bottom: 10px; }
+
+/* Полукруговой индикатор */
+.gauge-wrap { position: relative; max-width: 300px; margin: 4px auto 0; }
+.gauge { width: 100%; display: block; }
+.gauge-center {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 8%;
+  text-align: center;
+  line-height: 1;
+}
+.gauge-stage { font-size: 14px; color: var(--hint); font-weight: 600; margin-bottom: 2px; }
+.gauge-weight { font-size: 44px; font-weight: 800; }
+.gauge-unit { font-size: 14px; color: var(--hint); margin-top: 2px; }
+
+.prog-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 14px 0 16px;
+}
+.prog-row > div {
+  text-align: center;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 10px 4px;
+}
+.prog-row .pv { font-size: 18px; font-weight: 700; }
+.prog-row .pl { font-size: 11px; color: var(--hint); margin-top: 2px; }
+
+/* Точки этапов */
+.stage-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--gauge-bg);
+  transition: background .2s;
+}
+.dot.done { background: linear-gradient(135deg, #ff7043, #66bb6a); }
+.stage-caption { text-align: center; font-size: 13px; color: var(--hint); }
+
+/* Прогноз */
+.forecast { text-align: center; }
+.fc-line { font-size: 14px; color: var(--hint); }
+.fc-big { font-size: 22px; font-weight: 800; margin: 6px 0; color: var(--text); }
+.forecast.reached { font-size: 17px; font-weight: 700; color: var(--good); }
+
+/* Событие */
+.event { text-align: center; }
+.ev-head { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.ev-big { font-size: 34px; font-weight: 800; }
+.ev-big span { font-size: 18px; color: var(--hint); font-weight: 600; }
+.ev-sub { font-size: 13px; color: var(--hint); margin: 2px 0 8px; }
+.ev-note { font-size: 14px; font-weight: 700; }
+.ev-note.good { color: var(--good); }
+.ev-note.down { color: var(--good); }
+.ev-note.up { color: #ff5c5c; }
+
+/* ИМТ */
+.bmi { display: flex; align-items: center; gap: 16px; }
+.bmi-val { font-size: 38px; font-weight: 800; }
+.bmi-cat { font-size: 16px; font-weight: 700; }
+.bmi-lbl { font-size: 13px; color: var(--hint); margin-top: 2px; }
+.trend-good { color: var(--good); }
+
+/* Плитки трендов */
+.trend-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.trend-tile {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px 6px;
+  text-align: center;
+}
+.trend-tile .tv { font-size: 20px; font-weight: 800; }
+.trend-tile .tl { font-size: 11px; color: var(--hint); margin-top: 2px; }
+.trend-tile.down .tv { color: var(--good); }
+.trend-tile.up .tv { color: #ff5c5c; }
+.trend-tile.good .tv { color: var(--good); }
+.trend-tile.flat .tv { color: var(--hint); }
+
+.empty-card { padding: 0; }

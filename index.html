@@ -12,13 +12,55 @@
   <div id="app">
     <!-- Табы -->
     <nav class="tabs" id="tabs">
-      <button class="tab active" data-view="add">➕ Замер</button>
+      <button class="tab active" data-view="report">🎯 Отчёт</button>
+      <button class="tab" data-view="add">➕ Замер</button>
       <button class="tab" data-view="charts">📈 Графики</button>
       <button class="tab" data-view="history">📋 История</button>
     </nav>
 
+    <!-- ===== Экран: Отчёт (цель по весу) ===== -->
+    <section class="view active" id="view-report">
+      <div id="dashboard"></div>
+
+      <!-- Панель настройки цели (скрыта по умолчанию) -->
+      <div class="goal-panel" id="goal-panel" hidden>
+        <div class="card">
+          <div class="card-head">
+            <h2 id="goal-panel-title">Цель по весу</h2>
+            <button class="icon-btn" data-action="close-goal" title="Закрыть">✕</button>
+          </div>
+          <label class="field">
+            <span class="field-label">Рост, см (для расчёта ИМТ)</span>
+            <input type="number" inputmode="decimal" step="0.1" min="0" id="g-height" placeholder="например, 165" />
+          </label>
+          <label class="field">
+            <span class="field-label">Стартовый вес, кг</span>
+            <input type="number" inputmode="decimal" step="0.1" min="0" id="g-start" placeholder="авто по первому замеру" />
+          </label>
+          <label class="field">
+            <span class="field-label">Целевой вес, кг</span>
+            <input type="number" inputmode="decimal" step="0.1" min="0" id="g-target" placeholder="например, 80" />
+          </label>
+          <label class="field">
+            <span class="field-label">Количество этапов</span>
+            <input type="number" inputmode="numeric" step="1" min="1" max="20" id="g-stages" placeholder="8" />
+          </label>
+          <label class="field">
+            <span class="field-label">Дата события (необязательно)</span>
+            <input type="date" id="g-date" />
+          </label>
+          <label class="field">
+            <span class="field-label">Название события (необязательно)</span>
+            <input type="text" id="g-event" placeholder="например, День свадьбы" maxlength="40" />
+          </label>
+          <button class="btn-primary" data-action="save-goal">Сохранить цель</button>
+          <button class="btn-danger-ghost" data-action="delete-goal" id="btn-delete-goal" hidden>Удалить цель</button>
+        </div>
+      </div>
+    </section>
+
     <!-- ===== Экран: Добавить замер ===== -->
-    <section class="view active" id="view-add">
+    <section class="view" id="view-add">
       <div class="card">
         <label class="field">
           <span class="field-label">Дата замера</span>
@@ -55,7 +97,9 @@
   <script src="js/metrics.js"></script>
   <script src="js/stats.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/goal.js"></script>
   <script src="js/charts.js"></script>
+  <script src="js/dashboard.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

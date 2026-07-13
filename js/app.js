@@ -33,7 +33,110 @@ function toast(msg) {
 
 // ===== Состояние =====
 let entries = [];
+let goal = null;
 let activeMetric = METRICS[0].key;
+
+function fmt(n) {
+  return Math.abs(n) >= 10 ? (Number.isInteger(n) ? n : n.toFixed(1)) : n.toFixed(1);
+}
+function num(id) {
+  const raw = document.getElementById(id).value.trim();
+  if (raw === '') return null;
+  const n = Number(raw.replace(',', '.'));
+  return Number.isNaN(n) ? null : n;
+}
+
+// ===== Экран «Отчёт» =====
+function renderDashboardView() {
+  renderDashboard(document.getElementById('dashboard'), entries, goal);
+}
+
+function openGoalPanel() {
+  document.getElementById('g-height').value = goal?.height ?? '';
+  document.getElementById('g-start').value = goal?.startWeight ?? '';
+  document.getElementById('g-target').value = goal?.targetWeight ?? '';
+  document.getElementById('g-stages').value = goal?.stages ?? '';
+  document.getElementById('g-date').value = goal?.targetDate ?? '';
+  document.getElementById('g-event').value = goal?.eventName ?? '';
+  document.getElementById('goal-panel-title').textContent = goal ? 'Изменить цель' : 'Цель по весу';
+  document.getElementById('btn-delete-goal').hidden = !goal;
+
+  const wp = weightPoints(entries);
+  document.getElementById('g-start').placeholder =
+    wp.length ? `${fmt1(wp[0].y)} — первый замер` : 'например, 100';
+
+  document.getElementById('dashboard').hidden = true;
+  document.getElementById('goal-panel').hidden = false;
+}
+
+function closeGoalPanel() {
+  document.getElementById('goal-panel').hidden = true;
+  document.getElementById('dashboard').hidden = false;
+}
+
+async function saveGoalFromForm() {
+  const target = num('g-target');
+  if (target == null) { toast('Укажи целевой вес'); hapticNotify('error'); return; }
+
+  let start = num('g-start');
+  if (start == null) {
+    const wp = weightPoints(entries);
+    start = wp.length ? wp[0].y : target;
+  }
+  let stages = num('g-stages');
+  stages = stages ? Math.round(clamp(stages, 1, 20)) : 8;
+
+  const g = {
+    height: num('g-height'),
+    startWeight: start,
+    targetWeight: target,
+    stages,
+    targetDate: document.getElementById('g-date').value || null,
+    eventName: document.getElementById('g-event').value.trim() || null,
+  };
+
+  try {
+    await Store.saveGoal(g);
+    goal = g;
+    hapticNotify('success');
+    toast('Цель сохранена ✓');
+    closeGoalPanel();
+    renderDashboardView();
+  } catch (e) {
+    toast('Ошибка сохранения цели');
+    hapticNotify('error');
+    console.error(e);
+  }
+}
+
+function deleteGoalConfirmed() {
+  const doDelete = async () => {
+    try {
+      await Store.clearGoal();
+      goal = null;
+      hapticNotify('success');
+      toast('Цель удалена');
+      closeGoalPanel();
+      renderDashboardView();
+    } catch (e) { toast('Ошибка удаления'); console.error(e); }
+  };
+  if (tg?.showConfirm) tg.showConfirm('Удалить цель по весу?', ok => ok && doDelete());
+  else if (confirm('Удалить цель по весу?')) doDelete();
+}
+
+// Делегирование кликов по кнопкам дашборда и панели цели.
+function onReportClick(e) {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  haptic('light');
+  switch (el.dataset.action) {
+    case 'set-goal':
+    case 'edit-goal': openGoalPanel(); break;
+    case 'close-goal': closeGoalPanel(); break;
+    case 'save-goal': saveGoalFromForm(); break;
+    case 'delete-goal': deleteGoalConfirmed(); break;
+  }
+}
 
 // ===== Экран «Добавить замер» =====
 function todayStr() {
@@ -78,8 +181,8 @@ async function saveCurrentEntry() {
   for (const m of METRICS) {
     const raw = document.getElementById('in-' + m.key).value.trim();
     if (raw !== '') {
-      const num = Number(raw.replace(',', '.'));
-      if (!Number.isNaN(num)) values[m.key] = num;
+      const n = Number(raw.replace(',', '.'));
+      if (!Number.isNaN(n)) values[m.key] = n;
     }
   }
 
@@ -124,7 +227,7 @@ function renderChartView() {
   document.getElementById('chart-title').textContent = `${metric.emoji} ${metric.label}`;
 
   const canvas = document.getElementById('chart');
-  const { reg, stats } = renderChart(canvas, entries, activeMetric);
+  const { reg, stats } = renderChart(canvas, entries, activeMetric, goal);
 
   // Бейдж тренда
   const badge = document.getElementById('trend-badge');
@@ -146,10 +249,6 @@ function renderChartView() {
     <div class="stat"><div class="val">${fmt(stats.min)}–${fmt(stats.max)}</div><div class="lbl">Мин–макс</div></div>`;
 }
 
-function fmt(n) {
-  return Math.abs(n) >= 10 ? (Number.isInteger(n) ? n : n.toFixed(1)) : n.toFixed(1);
-}
-
 // ===== Экран «История» =====
 function renderHistory() {
   const list = document.getElementById('history-list');
@@ -158,7 +257,6 @@ function renderHistory() {
     return;
   }
   list.innerHTML = '';
-  // Показываем от новых к старым.
   for (const e of [...entries].reverse()) {
     const div = document.createElement('div');
     div.className = 'hist-entry';
@@ -192,11 +290,8 @@ function confirmDelete(date) {
       await reload();
     } catch (e) { toast('Ошибка удаления'); console.error(e); }
   };
-  if (tg?.showConfirm) {
-    tg.showConfirm('Удалить этот замер?', (ok) => ok && doDelete());
-  } else if (confirm('Удалить этот замер?')) {
-    doDelete();
-  }
+  if (tg?.showConfirm) tg.showConfirm('Удалить этот замер?', ok => ok && doDelete());
+  else if (confirm('Удалить этот замер?')) doDelete();
 }
 
 // ===== Навигация по табам =====
@@ -206,16 +301,13 @@ function switchView(view) {
   document.querySelectorAll('.view').forEach(v =>
     v.classList.toggle('active', v.id === 'view-' + view));
 
-  // MainButton (кнопка «Сохранить») нужна только на экране добавления.
+  // MainButton (кнопка «Сохранить замер») нужна только на экране добавления.
   if (tg?.MainButton) {
-    if (view === 'add') {
-      tg.MainButton.setText('Сохранить замер');
-      tg.MainButton.show();
-    } else {
-      tg.MainButton.hide();
-    }
+    if (view === 'add') { tg.MainButton.setText('Сохранить замер'); tg.MainButton.show(); }
+    else tg.MainButton.hide();
   }
 
+  if (view === 'report') { closeGoalPanel(); renderDashboardView(); }
   if (view === 'charts') { buildMetricChips(); renderChartView(); }
   if (view === 'history') renderHistory();
   if (view === 'add') prefillForSelectedDate();
@@ -224,7 +316,8 @@ function switchView(view) {
 // ===== Перезагрузка данных =====
 async function reload() {
   entries = await Store.getAllEntries();
-  const active = document.querySelector('.view.active')?.id.replace('view-', '') || 'add';
+  const active = document.querySelector('.view.active')?.id.replace('view-', '') || 'report';
+  if (active === 'report') renderDashboardView();
   if (active === 'charts') renderChartView();
   if (active === 'history') renderHistory();
   if (active === 'add') prefillForSelectedDate();
@@ -236,26 +329,30 @@ async function init() {
     tg.ready();
     tg.expand();
     applyTheme();
-    tg.onEvent('themeChanged', () => { applyTheme(); if (chartInstance) renderChartView(); });
+    tg.onEvent('themeChanged', () => {
+      applyTheme();
+      if (document.getElementById('view-charts').classList.contains('active')) renderChartView();
+    });
     tg.MainButton.setText('Сохранить замер');
     tg.MainButton.onClick(saveCurrentEntry);
-    tg.MainButton.show();
   }
 
   buildAddForm();
 
   document.getElementById('entry-date').addEventListener('change', prefillForSelectedDate);
+  document.getElementById('view-report').addEventListener('click', onReportClick);
   document.querySelectorAll('.tab').forEach(tab =>
     tab.addEventListener('click', () => { haptic('light'); switchView(tab.dataset.view); }));
 
   try {
-    entries = await Store.getAllEntries();
+    [entries, goal] = await Promise.all([Store.getAllEntries(), Store.getGoal()]);
   } catch (e) {
     console.error('Не удалось загрузить данные', e);
     toast('Не удалось загрузить данные');
   }
 
   prefillForSelectedDate();
+  switchView('report');
 
   if (!Store.usingCloud) {
     console.warn('CloudStorage недоступен — данные хранятся локально в браузере.');

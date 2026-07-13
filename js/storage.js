@@ -8,6 +8,7 @@
 // хватает: один ключ на дату.
 
 const KEY_PREFIX = 'bt_';
+const GOAL_KEY = 'cfg_goal';
 
 function dateToKey(dateStr) {
   return KEY_PREFIX + dateStr.replace(/-/g, ''); // 2026-07-13 -> bt_20260713
@@ -87,5 +88,24 @@ const Store = {
 
   async deleteEntry(date) {
     await backend.removeItem(dateToKey(date));
+  },
+
+  // ===== Цель по весу =====
+  // Хранится под отдельным ключом cfg_goal (не начинается с bt_, поэтому
+  // не попадает в getAllEntries). Объект:
+  // { height, startWeight, targetWeight, stages, targetDate, eventName }
+  async getGoal() {
+    const obj = await backend.getItems([GOAL_KEY]);
+    const raw = obj[GOAL_KEY];
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (_) { return null; }
+  },
+
+  async saveGoal(goal) {
+    await backend.setItem(GOAL_KEY, JSON.stringify(goal));
+  },
+
+  async clearGoal() {
+    await backend.removeItem(GOAL_KEY);
   },
 };
