@@ -440,3 +440,19 @@ input:focus { border-color: var(--accent); }
 .launch h1 { font-size: 22px; margin: 12px 0 0; }
 .launch p { color: var(--hint); font-size: 15px; max-width: 320px; margin: 4px 0 16px; }
 .launch-btn { display: inline-block; width: auto; text-decoration: none; padding: 14px 28px; }
+
+/* ===== Переключатель масштаба графика ===== */
+.chart-range { display: flex; gap: 6px; margin-top: 12px; }
+.chart-range button {
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--hint);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.chart-range button.active { background: var(--accent); color: var(--button-text); }

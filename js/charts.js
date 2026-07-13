@@ -1,21 +1,61 @@
 // Отрисовка графика метрики с линией тренда (линейная регрессия).
 // Для веса дополнительно рисуется линия цели и продолжение тренда до цели.
+// range: 'days' | 'weeks' | 'months' | 'all' — масштаб/агрегация по времени.
 let chartInstance = null;
 
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-// entries: [{ date, values }]  metricKey: строка  goal: объект цели | null
-// Возвращает { reg, stats } для показа бейджа тренда и статистики.
-function renderChart(canvas, entries, metricKey, goal) {
-  const metric = METRIC_BY_KEY[metricKey];
+// Агрегация точек под выбранный масштаб.
+// days   — последние 30 дней, сырые точки;
+// all    — все точки без изменений;
+// weeks  — среднее по неделям (точка = середина недели);
+// months — среднее по месяцам (точка = середина месяца).
+function aggregatePoints(points, mode) {
+  if (!points.length) return points;
+  if (mode === 'days') {
+    const lastX = points[points.length - 1].x;
+    return points.filter(p => lastX - p.x <= 30 * MS_PER_DAY);
+  }
+  if (mode === 'weeks' || mode === 'months') {
+    const groups = new Map();
+    for (const p of points) {
+      const d = new Date(p.x);
+      let key, cx;
+      if (mode === 'weeks') {
+        const dow = (d.getDay() + 6) % 7; // 0 = понедельник
+        const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
+        key = monday.getTime();
+        cx = key + 3.5 * MS_PER_DAY;      // середина недели
+      } else {
+        key = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+        cx = new Date(d.getFullYear(), d.getMonth(), 15).getTime(); // середина месяца
+      }
+      if (!groups.has(key)) groups.set(key, { sum: 0, c: 0, cx });
+      const g = groups.get(key);
+      g.sum += p.y; g.c++;
+    }
+    return [...groups.values()]
+      .sort((a, b) => a.cx - b.cx)
+      .map(g => ({ x: g.cx, y: g.sum / g.c }));
+  }
+  return points; // 'all'
+}
 
-  // Собираем точки, где метрика заполнена.
-  const points = entries
+// entries: [{ date, values }]  metricKey: строка  goal: объект|null  range: строка
+// Возвращает { reg, stats } для показа бейджа тренда и статистики.
+function renderChart(canvas, entries, metricKey, goal, range) {
+  const metric = METRIC_BY_KEY[metricKey];
+  range = range || 'all';
+  const monthMode = range === 'months';
+
+  const raw = entries
     .filter(e => e.values[metricKey] != null && !Number.isNaN(e.values[metricKey]))
     .map(e => ({ x: new Date(e.date + 'T00:00:00').getTime(), y: Number(e.values[metricKey]) }))
     .sort((a, b) => a.x - b.x);
+
+  const points = aggregatePoints(raw, range);
 
   const reg = linearRegression(points);
   const stats = seriesStats(points);
@@ -27,7 +67,7 @@ function renderChart(canvas, entries, metricKey, goal) {
 
   // Цель по весу: горизонтальная линия + продолжение тренда до цели.
   const isWeightGoal = metricKey === 'weight' && goal && goal.targetWeight != null && points.length >= 1;
-  let projX = points.length ? points[points.length - 1].x : 0; // до какого x тянуть ось
+  let projX = points.length ? points[points.length - 1].x : 0;
   let goalLine = [], projLine = [];
 
   if (isWeightGoal) {
@@ -37,7 +77,6 @@ function renderChart(canvas, entries, metricKey, goal) {
     const proj = projectToTarget(reg, lastX, lastY, target);
 
     if (proj && proj.dateMs && proj.dateMs > lastX) {
-      // Не тянем прогноз дальше, чем на год вперёд.
       projX = Math.min(proj.dateMs, lastX + 365 * MS_PER_DAY);
       projLine = [
         { x: lastX, y: reg.slope * lastX + reg.intercept },
@@ -67,7 +106,7 @@ function renderChart(canvas, entries, metricKey, goal) {
       borderColor: accent,
       backgroundColor: accent,
       borderWidth: 2.5,
-      pointRadius: 4,
+      pointRadius: points.length > 40 ? 2 : 4,
       pointHoverRadius: 6,
       tension: 0.25,
       order: 1,
@@ -110,6 +149,10 @@ function renderChart(canvas, entries, metricKey, goal) {
     });
   }
 
+  const fmtTick = (v) => monthMode
+    ? new Date(v).toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' })
+    : new Date(v).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -117,10 +160,12 @@ function renderChart(canvas, entries, metricKey, goal) {
     plugins: {
       legend: { display: false },
       tooltip: {
-        filter: (item) => item.dataset.label === METRIC_BY_KEY[metricKey].label,
+        filter: (item) => item.dataset.label === metric.label,
         callbacks: {
-          title: (items) => new Date(items[0].parsed.x).toLocaleDateString('ru-RU'),
-          label: (item) => `${item.parsed.y} ${metric.unit}`,
+          title: (items) => monthMode
+            ? new Date(items[0].parsed.x).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+            : new Date(items[0].parsed.x).toLocaleDateString('ru-RU'),
+          label: (item) => `${Math.round(item.parsed.y * 10) / 10} ${metric.unit}`,
         },
       },
     },
@@ -128,12 +173,7 @@ function renderChart(canvas, entries, metricKey, goal) {
       x: {
         type: 'linear',
         grid: { color: grid },
-        ticks: {
-          color: hint,
-          maxRotation: 0,
-          autoSkipPadding: 20,
-          callback: (v) => new Date(v).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }),
-        },
+        ticks: { color: hint, maxRotation: 0, autoSkipPadding: 20, callback: fmtTick },
       },
       y: {
         grid: { color: grid },

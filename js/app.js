@@ -58,6 +58,7 @@ function toast(msg) {
 let entries = [];
 let goal = null;
 let activeMetric = METRICS[0].key;
+let chartRange = 'all'; // 'days' | 'weeks' | 'months' | 'all'
 
 function fmt(n) {
   return Math.abs(n) >= 10 ? (Number.isInteger(n) ? n : n.toFixed(1)) : n.toFixed(1);
@@ -255,8 +256,12 @@ function renderChartView() {
   const metric = METRIC_BY_KEY[activeMetric];
   document.getElementById('chart-title').textContent = `${metric.emoji} ${metric.label}`;
 
+  // Активная кнопка диапазона.
+  document.querySelectorAll('#chart-range button').forEach(b =>
+    b.classList.toggle('active', b.dataset.range === chartRange));
+
   const canvas = document.getElementById('chart');
-  const { reg, stats } = renderChart(canvas, entries, activeMetric, goal);
+  const { reg, stats } = renderChart(canvas, entries, activeMetric, goal, chartRange);
 
   // Бейдж тренда
   const badge = document.getElementById('trend-badge');
@@ -416,6 +421,12 @@ async function init() {
 
   document.getElementById('entry-date').addEventListener('change', prefillForSelectedDate);
   document.getElementById('view-report').addEventListener('click', onReportClick);
+  document.querySelectorAll('#chart-range button').forEach(btn =>
+    btn.addEventListener('click', () => {
+      chartRange = btn.dataset.range;
+      haptic('light');
+      renderChartView();
+    }));
   document.querySelectorAll('.tab').forEach(tab =>
     tab.addEventListener('click', () => { haptic('light'); switchView(tab.dataset.view); }));
 
