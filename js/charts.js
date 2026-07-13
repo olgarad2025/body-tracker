@@ -43,6 +43,20 @@ function aggregatePoints(points, mode) {
   return points; // 'all'
 }
 
+// Линия «коридора» снижения веса: прямая из стартовой точки с постоянным
+// темпом rate (кг/нед). Отсекается целевым весом (не ниже target) и видимым
+// диапазоном [vMin, vMax] — поэтому корректна в любом масштабе графика.
+function corridorLine(startX, startWeight, target, rate, vMin, vMax) {
+  const total = startWeight - target; // сколько нужно сбросить
+  if (total <= 0 || rate <= 0) return [];
+  const xReach = startX + (total / rate) * MS_PER_WEEK; // когда достигнет цели
+  const xL = Math.max(startX, vMin);
+  const xR = Math.min(vMax, xReach);
+  if (xR <= xL) return [];
+  const yAt = (x) => Math.max(target, startWeight - rate * (x - startX) / MS_PER_WEEK);
+  return [{ x: xL, y: yAt(xL) }, { x: xR, y: yAt(xR) }];
+}
+
 // entries: [{ date, values }]  metricKey: строка  goal: объект|null  range: строка
 // Возвращает { reg, stats } для показа бейджа тренда и статистики.
 function renderChart(canvas, entries, metricKey, goal, range) {
@@ -68,7 +82,7 @@ function renderChart(canvas, entries, metricKey, goal, range) {
   // Цель по весу: горизонтальная линия + продолжение тренда до цели.
   const isWeightGoal = metricKey === 'weight' && goal && goal.targetWeight != null && points.length >= 1;
   let projX = points.length ? points[points.length - 1].x : 0;
-  let goalLine = [], projLine = [];
+  let goalLine = [], projLine = [], minCorridor = [], maxCorridor = [];
 
   if (isWeightGoal) {
     const target = goal.targetWeight;
@@ -83,10 +97,18 @@ function renderChart(canvas, entries, metricKey, goal, range) {
         { x: projX, y: reg.slope * projX + reg.intercept },
       ];
     }
-    const x0 = goal.startDate
+    const startX = goal.startDate
       ? new Date(goal.startDate + 'T00:00:00').getTime()
       : points[0].x;
-    goalLine = [{ x: x0, y: target }, { x: projX, y: target }];
+    goalLine = [{ x: startX, y: target }, { x: projX, y: target }];
+
+    // Коридор здорового снижения (мин/макс кг в неделю) из стартовой точки.
+    const startWeight = goal.startWeight != null ? goal.startWeight : points[0].y;
+    const minRate = goal.minRate != null ? goal.minRate : 0.5;
+    const maxRate = goal.maxRate != null ? goal.maxRate : 1.0;
+    const vMin = points[0].x;
+    minCorridor = corridorLine(startX, startWeight, target, minRate, vMin, projX);
+    maxCorridor = corridorLine(startX, startWeight, target, maxRate, vMin, projX);
   }
 
   // Линия тренда — две точки на краях диапазона данных.
@@ -146,6 +168,29 @@ function renderChart(canvas, entries, metricKey, goal, range) {
       pointHoverRadius: 0,
       fill: false,
       order: 4,
+    });
+    const corridorColor = '#66bb6a';
+    datasets.push({
+      label: 'Мин. темп',
+      data: minCorridor,
+      borderColor: corridorColor,
+      borderWidth: 1.2,
+      borderDash: [4, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      order: 5,
+    });
+    datasets.push({
+      label: 'Макс. темп',
+      data: maxCorridor,
+      borderColor: corridorColor,
+      borderWidth: 1.2,
+      borderDash: [4, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      order: 6,
     });
   }
 

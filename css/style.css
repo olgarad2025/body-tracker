@@ -456,3 +456,7 @@ input:focus { border-color: var(--accent); }
   transition: background .15s, color .15s;
 }
 .chart-range button.active { background: var(--accent); color: var(--button-text); }
+
+/* Пара полей в ряд (мин/макс темп) */
+.field-row { display: flex; gap: 10px; }
+.field-row .field { flex: 1; }

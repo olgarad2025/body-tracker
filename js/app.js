@@ -80,6 +80,8 @@ function openGoalPanel() {
   document.getElementById('g-start').value = goal?.startWeight ?? '';
   document.getElementById('g-startdate').value = goal?.startDate ?? '';
   document.getElementById('g-target').value = goal?.targetWeight ?? '';
+  document.getElementById('g-minrate').value = goal?.minRate ?? '';
+  document.getElementById('g-maxrate').value = goal?.maxRate ?? '';
   document.getElementById('g-stages').value = goal?.stages ?? '';
   document.getElementById('g-date').value = goal?.targetDate ?? '';
   document.getElementById('g-event').value = goal?.eventName ?? '';
@@ -115,11 +117,16 @@ async function saveGoalFromForm() {
   let stages = num('g-stages');
   stages = stages ? Math.round(clamp(stages, 1, 20)) : 8;
 
+  const minRate = num('g-minrate') ?? 0.5;
+  const maxRate = num('g-maxrate') ?? 1.0;
+
   const g = {
     height: num('g-height'),
     startWeight: start,
     startDate: document.getElementById('g-startdate').value || null,
     targetWeight: target,
+    minRate,
+    maxRate,
     stages,
     targetDate: document.getElementById('g-date').value || null,
     eventName: document.getElementById('g-event').value.trim() || null,
