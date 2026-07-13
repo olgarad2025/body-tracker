@@ -83,7 +83,7 @@ function renderChart(canvas, entries, metricKey, goal, range) {
   const isWeightGoal = metricKey === 'weight' && goal && goal.targetWeight != null && points.length >= 1;
   let projX = points.length ? points[points.length - 1].x : 0;
   let goalLine = [], projLine = [], minCorridor = [], maxCorridor = [];
-  let xMin, xMax; // явное окно оси X для графика веса с целью
+  let xMin, xMax, panMin, panMax; // окно оси X и границы панорамирования
 
   if (isWeightGoal) {
     const DAY = MS_PER_DAY, WEEK = MS_PER_WEEK;
@@ -105,20 +105,28 @@ function renderChart(canvas, entries, metricKey, goal, range) {
       ? Math.min(startX + (total / minRate) * WEEK, startX + 730 * DAY)
       : rawLastX + 30 * DAY;
 
+    // Самый ранний край: старт цели ИЛИ более ранние замеры (если вес вёлся
+    // до постановки цели) — чтобы историю до цели тоже было видно.
+    const anchorMin = Math.min(rawFirstX, startX) - 3 * DAY;
+
     // Окно оси X по масштабу. Будущее показываем всегда, чтобы был виден коридор.
     if (range === 'all') {
-      xMin = Math.min(startX, rawFirstX);
+      xMin = anchorMin;
       xMax = goalReachX;
     } else if (range === 'months') {
-      xMin = Math.min(startX, rawFirstX);
+      xMin = anchorMin;
       xMax = Math.min(goalReachX, rawLastX + 182 * DAY);
     } else if (range === 'weeks') {
-      xMin = Math.max(startX, rawLastX - 84 * DAY);
+      xMin = Math.max(anchorMin, rawLastX - 84 * DAY);
       xMax = Math.min(goalReachX, rawLastX + 84 * DAY);
     } else { // days
-      xMin = Math.max(startX, rawLastX - 30 * DAY);
+      xMin = Math.max(anchorMin, rawLastX - 30 * DAY);
       xMax = Math.min(goalReachX, rawLastX + 30 * DAY);
     }
+
+    // Границы панорамирования: назад до самых ранних замеров, вперёд до цели.
+    panMin = anchorMin - 7 * DAY;
+    panMax = goalReachX + 30 * DAY;
 
     // Прогноз по фактическому тренду (если он вообще ведёт к цели).
     const proj = projectToTarget(reg, rawLastX, lastY, target);
@@ -134,6 +142,12 @@ function renderChart(canvas, entries, metricKey, goal, range) {
     goalLine = [{ x: startX, y: target }, { x: xMax, y: target }];
     minCorridor = corridorLine(startX, startWeight, target, minRate, startX, xMax);
     maxCorridor = corridorLine(startX, startWeight, target, maxRate, startX, xMax);
+  }
+
+  // Границы панорамирования для остальных графиков (без цели) — по данным.
+  if (panMin == null && raw.length) {
+    panMin = raw[0].x - 7 * MS_PER_DAY;
+    panMax = raw[raw.length - 1].x + 7 * MS_PER_DAY;
   }
 
   // Линия тренда — две точки на краях диапазона данных.
@@ -237,6 +251,12 @@ function renderChart(canvas, entries, metricKey, goal, range) {
             : new Date(items[0].parsed.x).toLocaleDateString('ru-RU'),
           label: (item) => `${Math.round(item.parsed.y * 10) / 10} ${metric.unit}`,
         },
+      },
+      // Панорамирование (перетаскивание) и зум (щипок/колесо) по оси X.
+      zoom: {
+        limits: (panMin != null && panMax != null) ? { x: { min: panMin, max: panMax } } : undefined,
+        pan: { enabled: true, mode: 'x', threshold: 8 },
+        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
       },
     },
     scales: {

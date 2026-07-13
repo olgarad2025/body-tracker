@@ -16,7 +16,9 @@
   <link rel="manifest" href="manifest.json" />
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="js/vendor/chart.umd.min.js"></script>
+  <script src="js/vendor/hammer.min.js"></script>
+  <script src="js/vendor/chartjs-plugin-zoom.min.js"></script>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -115,6 +117,7 @@
           <button data-range="months">Месяцы</button>
           <button data-range="all">Всё время</button>
         </div>
+        <p class="chart-hint">↔ двигайте график пальцем · щипок — масштаб · двойной тап — сброс</p>
         <div class="stats-row" id="stats-row"></div>
       </div>
     </section>

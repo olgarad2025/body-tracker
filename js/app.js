@@ -434,6 +434,16 @@ async function init() {
       haptic('light');
       renderChartView();
     }));
+
+  // Двойной тап / двойной клик по графику — сброс панорамы и масштаба.
+  const canvas = document.getElementById('chart');
+  let lastTap = 0;
+  canvas.addEventListener('touchend', () => {
+    const now = Date.now();
+    if (now - lastTap < 300) { chartInstance?.resetZoom?.(); haptic('light'); }
+    lastTap = now;
+  });
+  canvas.addEventListener('dblclick', () => chartInstance?.resetZoom?.());
   document.querySelectorAll('.tab').forEach(tab =>
     tab.addEventListener('click', () => { haptic('light'); switchView(tab.dataset.view); }));
 
