@@ -1,5 +1,8 @@
 # 📏 Замеры тела — Telegram Mini App
 
+> **🚀 Развёрнуто:** https://olgarad2025.github.io/body-tracker/
+> Репозиторий: https://github.com/olgarad2025/body-tracker
+
 Приложение для отслеживания параметров тела: вес, объём груди, под грудью, талия,
 живот, бёдра, бедро левое и правое. По каждому параметру строится график с
 **линией тренда** (линейная регрессия) и подписью, куда движется показатель.
@@ -59,7 +62,7 @@ python -m http.server 8080
    - Branch: **main**, папка **/(root)** → **Save**.
 
 3. Через минуту сайт будет доступен по адресу
-   `https://<логин>.github.io/<репозиторий>/`. Проверь, что он открывается по HTTPS.
+   `https://olgarad2025.github.io/body-tracker/`. Проверь, что он открывается по HTTPS.
 
 ## Подключение к боту (BotFather)
 
@@ -72,7 +75,7 @@ python -m http.server 8080
    ```
    /setmenubutton
    → выбери бота
-   → пришли URL: https://<логин>.github.io/<репозиторий>/
+   → пришли URL: https://olgarad2025.github.io/body-tracker/
    → задай текст кнопки, например: Замеры
    ```
 
@@ -81,7 +84,7 @@ python -m http.server 8080
    /newapp
    → выбери бота
    → заполни название, описание, иконку
-   → Web App URL: https://<логин>.github.io/<репозиторий>/
+   → Web App URL: https://olgarad2025.github.io/body-tracker/
    ```
 
 3. Открой бота в Telegram, нажми кнопку меню (или ссылку приложения) — Mini App
